@@ -338,7 +338,9 @@ function handleA(e){
     case 'home':S.view='home';S.pop=null;render();break;
     case 'start':{
       const due=getDue();
-      S.queue=due.map(c=>c.id).sort(()=>Math.random()-.5);
+      const reviewed=due.filter(c=>c.reps>0).sort(()=>Math.random()-.5);
+      const fresh=due.filter(c=>!c.reps).sort(()=>Math.random()-.5);
+      S.queue=[...reviewed,...fresh].map(c=>c.id);
       S.idx=0;S.flipped=false;S.view='review';render();
     }break;
     case 'flip':S.flipped=true;render();break;
