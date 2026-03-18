@@ -147,6 +147,8 @@ let toastT;
 
 // ── Helpers ──
 function fmtD(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function loadRC(){try{const s=localStorage.getItem('palavras_rc');if(s){const d=JSON.parse(s);if(d.date===fmtD(new Date())){S.rcounts=d.counts;return;}}S.rcounts=[0,0,0,0];}catch(e){S.rcounts=[0,0,0,0];}}
+function saveRC(){try{localStorage.setItem('palavras_rc',JSON.stringify({date:fmtD(new Date()),counts:S.rcounts}));}catch(e){}}
 function parseD(s){const[y,m,d]=s.split('-');return new Date(y,m-1,d);}
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function toast(m){S.toast=m;render();clearTimeout(toastT);toastT=setTimeout(()=>{S.toast=null;render();},1800);}
@@ -337,12 +339,12 @@ function handleA(e){
     case 'start':{
       const due=getDue();
       S.queue=due.map(c=>c.id).sort(()=>Math.random()-.5);
-      S.idx=0;S.flipped=false;S.rcounts=[0,0,0,0];S.view='review';render();
+      S.idx=0;S.flipped=false;S.view='review';render();
     }break;
     case 'flip':S.flipped=true;render();break;
     case 'rate':{
       const card=S.cards.find(c=>c.id===S.queue[S.idx]);
-      if(card){const r=parseInt(v);S.rcounts[r]++;const upd=sm2(card,r);Object.assign(card,upd);save();}
+      if(card){const r=parseInt(v);S.rcounts[r]++;saveRC();const upd=sm2(card,r);Object.assign(card,upd);save();}
       S.idx++;S.flipped=false;render();
     }break;
     case 'list':S.view='list';S.search='';S.pop=null;render();break;
@@ -368,6 +370,7 @@ function handleA(e){
   }
 }
 
+loadRC();
 render();
 </script>
 </body>
