@@ -50,6 +50,11 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .rcard-note{font-size:13px;color:var(--dim);margin-top:12px;line-height:1.5}
 .rcard-tap{font-size:11px;color:var(--dim);margin-top:20px;opacity:.5}
 .prog{font-size:13px;color:var(--dim);text-align:center;margin-bottom:16px}
+.rcounts{display:flex;justify-content:center;gap:16px;margin-bottom:16px;font-size:11px;color:var(--dim)}
+.rc-item{display:flex;align-items:center;gap:4px}
+.rc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rc-d0{background:#E05252}.rc-d1{background:#fbbf24}.rc-d2{background:#4ade80}.rc-d3{background:#60a5fa}
+.rc-v{font-weight:700}
 /* Ratings */
 .ratings{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:20px}
 .rate{border:none;border-radius:10px;padding:12px 4px;font-size:11px;font-weight:700;font-family:var(--font);cursor:pointer;text-align:center;line-height:1.3}
@@ -135,7 +140,7 @@ const auth=getAuth(fbApp),db=getFirestore(fbApp);
 let S={
   user:null,authOk:false,dataOk:false,
   cards:[],view:'home',flipped:false,idx:0,queue:[],search:'',
-  pop:null,editId:null,form:{pt:'',ja:'',note:''},
+  pop:null,editId:null,form:{pt:'',ja:'',note:''},rcounts:[0,0,0,0],
   toast:null,unsub:[]
 };
 let toastT;
@@ -244,16 +249,28 @@ function renderReview(){
       <button class="rate r2" data-a="rate" data-v="2">良い<span class="rate-sub">${preview(card,2)}</span></button>
       <button class="rate r3" data-a="rate" data-v="3">簡単<span class="rate-sub">${preview(card,3)}</span></button>
     </div>`:''}
+    ${S.rcounts.some(v=>v>0)?`<div class="rcounts">
+      <div class="rc-item"><span class="rc-dot rc-d0"></span><span class="rc-v">${S.rcounts[0]}</span></div>
+      <div class="rc-item"><span class="rc-dot rc-d1"></span><span class="rc-v">${S.rcounts[1]}</span></div>
+      <div class="rc-item"><span class="rc-dot rc-d2"></span><span class="rc-v">${S.rcounts[2]}</span></div>
+      <div class="rc-item"><span class="rc-dot rc-d3"></span><span class="rc-v">${S.rcounts[3]}</span></div>
+    </div>`:''}
   </div>`;
 }
 
 function renderDone(){
-  const n=S.queue.length;
+  const n=S.queue.length,rc=S.rcounts;
   return `<div class="app-inner">
     <div class="done">
       <div class="done-i">🎉</div>
       <div class="done-t">復習完了！</div>
       <div class="done-d">${n}枚のカードを復習しました</div>
+    </div>
+    <div class="rcounts" style="justify-content:center;gap:20px;margin:20px 0;font-size:13px">
+      <div class="rc-item"><span class="rc-dot rc-d0"></span>もう一度 <span class="rc-v">${rc[0]}</span></div>
+      <div class="rc-item"><span class="rc-dot rc-d1"></span>難しい <span class="rc-v">${rc[1]}</span></div>
+      <div class="rc-item"><span class="rc-dot rc-d2"></span>良い <span class="rc-v">${rc[2]}</span></div>
+      <div class="rc-item"><span class="rc-dot rc-d3"></span>簡単 <span class="rc-v">${rc[3]}</span></div>
     </div>
     <button class="rbtn" data-a="home">ホームに戻る</button>
   </div>`;
@@ -320,12 +337,12 @@ function handleA(e){
     case 'start':{
       const due=getDue();
       S.queue=due.map(c=>c.id).sort(()=>Math.random()-.5);
-      S.idx=0;S.flipped=false;S.view='review';render();
+      S.idx=0;S.flipped=false;S.rcounts=[0,0,0,0];S.view='review';render();
     }break;
     case 'flip':S.flipped=true;render();break;
     case 'rate':{
       const card=S.cards.find(c=>c.id===S.queue[S.idx]);
-      if(card){const r=parseInt(v);const upd=sm2(card,r);Object.assign(card,upd);save();}
+      if(card){const r=parseInt(v);S.rcounts[r]++;const upd=sm2(card,r);Object.assign(card,upd);save();}
       S.idx++;S.flipped=false;render();
     }break;
     case 'list':S.view='list';S.search='';S.pop=null;render();break;
