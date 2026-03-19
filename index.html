@@ -49,7 +49,7 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .rcard-lang{font-size:11px;color:var(--dim);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase}
 .rcard-word{font-size:28px;font-weight:700;line-height:1.4}
 .rcard-note{font-size:13px;color:var(--dim);margin-top:12px;line-height:1.5}
-.rcard-ex{font-size:12px;color:var(--mid);margin-top:10px;line-height:1.5;font-style:italic}
+.rcard-ex{font-size:14px;color:var(--mid);margin-top:4px;margin-bottom:16px;line-height:1.6;text-align:center}
 .rcard-tap{font-size:11px;color:var(--dim);margin-top:20px;opacity:.5}
 .prog{font-size:13px;color:var(--dim);text-align:center;margin-bottom:16px}
 .rcounts{display:flex;justify-content:center;gap:16px;margin-bottom:16px;font-size:11px;color:var(--dim)}
@@ -248,7 +248,6 @@ function renderReview(){
       <div class="rcard-lang">${fl?bLang:fLang}</div>
       <div class="rcard-word">${fl?esc(back):esc(front)}</div>
       ${fl&&card.note?`<div class="rcard-note">${esc(card.note)}</div>`:''}
-      ${fl&&card.ex?`<div class="rcard-ex">📝 ${esc(card.ex)}</div>`:''}
       ${!fl?'<div class="rcard-tap">タップして答えを見る</div>':''}
     </div>
     ${fl?`<div class="ratings">
@@ -263,6 +262,7 @@ function renderReview(){
       <div class="rc-item"><span class="rc-dot rc-d2"></span><span class="rc-v">${S.rcounts[2]}</span></div>
       <div class="rc-item"><span class="rc-dot rc-d3"></span><span class="rc-v">${S.rcounts[3]}</span></div>
     </div>`:''}
+    ${fl&&card.ex?`<div class="rcard-ex">📝 ${esc(card.ex)}</div>`:''}
   </div>`;
 }
 
