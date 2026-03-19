@@ -49,6 +49,7 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .rcard-lang{font-size:11px;color:var(--dim);letter-spacing:2px;margin-bottom:12px;text-transform:uppercase}
 .rcard-word{font-size:28px;font-weight:700;line-height:1.4}
 .rcard-note{font-size:13px;color:var(--dim);margin-top:12px;line-height:1.5}
+.rcard-ex{font-size:12px;color:var(--mid);margin-top:10px;line-height:1.5;font-style:italic}
 .rcard-tap{font-size:11px;color:var(--dim);margin-top:20px;opacity:.5}
 .prog{font-size:13px;color:var(--dim);text-align:center;margin-bottom:16px}
 .rcounts{display:flex;justify-content:center;gap:16px;margin-bottom:16px;font-size:11px;color:var(--dim)}
@@ -141,7 +142,7 @@ const auth=getAuth(fbApp),db=getFirestore(fbApp);
 let S={
   user:null,authOk:false,dataOk:false,
   cards:[],view:'home',flipped:false,idx:0,queue:[],search:'',
-  pop:null,editId:null,form:{pt:'',ja:'',note:''},rcounts:[0,0,0,0],
+  pop:null,editId:null,form:{pt:'',ja:'',note:'',ex:''},dirs:[],rcounts:[0,0,0,0],
   toast:null,unsub:[]
 };
 let toastT;
@@ -236,14 +237,17 @@ function renderReview(){
   if(S.idx>=S.queue.length)return renderDone();
   const card=S.cards.find(c=>c.id===S.queue[S.idx]);
   if(!card)return renderDone();
-  const fl=S.flipped;
+  const fl=S.flipped,rev=S.dirs[S.idx];
+  const front=rev?card.ja:card.pt,back=rev?card.pt:card.ja;
+  const fLang=rev?'日本語':'Português',bLang=rev?'Português':'日本語';
   return `<div class="app-inner">
     <button class="back" data-a="home">← やめる</button>
     <div class="prog">${S.idx+1} / ${S.queue.length}</div>
     <div class="rcard" data-a="flip">
-      <div class="rcard-lang">${fl?'日本語':'Português'}</div>
-      <div class="rcard-word">${fl?esc(card.ja):esc(card.pt)}</div>
+      <div class="rcard-lang">${fl?bLang:fLang}</div>
+      <div class="rcard-word">${fl?esc(back):esc(front)}</div>
       ${fl&&card.note?`<div class="rcard-note">${esc(card.note)}</div>`:''}
+      ${fl&&card.ex?`<div class="rcard-ex">📝 ${esc(card.ex)}</div>`:''}
       ${!fl?'<div class="rcard-tap">タップして答えを見る</div>':''}
     </div>
     ${fl?`<div class="ratings">
@@ -314,7 +318,8 @@ function renderForm(){
     <div class="stl">${e?'カードを編集':'新しいカード'}</div>
     <div class="ig"><label class="il">ポルトガル語</label><input class="ti" id="fpt" value="${esc(f.pt)}" placeholder="例: Obrigado" autofocus></div>
     <div class="ig"><label class="il">日本語</label><input class="ti" id="fja" value="${esc(f.ja)}" placeholder="例: ありがとう"></div>
-    <div class="ig"><label class="il">メモ（任意）</label><input class="ti" id="fnote" value="${esc(f.note)}" placeholder="例: Thank you / 例文など"></div>
+    <div class="ig"><label class="il">メモ（任意）</label><input class="ti" id="fnote" value="${esc(f.note)}" placeholder="例: Thank you / 品詞など"></div>
+    <div class="ig"><label class="il">例文（任意）</label><input class="ti" id="fex" value="${esc(f.ex)}" placeholder="例: Muito obrigado pela ajuda"></div>
     <div class="fa"><button class="bc" data-a="cancel">キャンセル</button><button class="bs" data-a="save" ${f.pt.trim()&&f.ja.trim()?'':'disabled'}>${e?'保存する':'追加する'}</button></div>
   </div>`;
 }
@@ -326,6 +331,8 @@ function bind(){
   if(fpt)fpt.addEventListener('input',e=>{S.form.pt=e.target.value;updBtn();});
   if(fja)fja.addEventListener('input',e=>{S.form.ja=e.target.value;updBtn();});
   if(fnote)fnote.addEventListener('input',e=>{S.form.note=e.target.value;});
+  const fex=document.getElementById('fex');
+  if(fex)fex.addEventListener('input',e=>{S.form.ex=e.target.value;});
   const srch=document.getElementById('srch');
   if(srch)srch.addEventListener('input',e=>{S.search=e.target.value;render();});
 }
@@ -342,6 +349,7 @@ function handleA(e){
       const reviewed=due.filter(c=>c.reps>0||c.interval>0).sort(()=>Math.random()-.5);
       const fresh=due.filter(c=>!c.reps&&!c.interval).sort(()=>Math.random()-.5);
       S.queue=[...reviewed,...fresh].map(c=>c.id);
+      S.dirs=S.queue.map(()=>Math.random()<0.5);
       S.idx=0;S.flipped=false;S.view='review';render();
     }break;
     case 'flip':S.flipped=true;render();break;
@@ -351,10 +359,10 @@ function handleA(e){
       S.idx++;S.flipped=false;render();
     }break;
     case 'list':S.view='list';S.search='';S.pop=null;render();break;
-    case 'add':S.form={pt:'',ja:'',note:''};S.editId=null;S.view='add';render();break;
+    case 'add':S.form={pt:'',ja:'',note:'',ex:''};S.editId=null;S.view='add';render();break;
     case 'edit':{
       const c=S.cards.find(c=>c.id===id);
-      if(c){S.form={pt:c.pt,ja:c.ja,note:c.note||''};S.editId=id;S.view='edit';S.pop=null;render();}
+      if(c){S.form={pt:c.pt,ja:c.ja,note:c.note||'',ex:c.ex||''};S.editId=id;S.view='edit';S.pop=null;render();}
     }break;
     case 'del':S.cards=S.cards.filter(c=>c.id!==id);S.pop=null;save();toast('削除しました');break;
     case 'more':e.stopPropagation();S.pop=S.pop===id?null:id;render();break;
@@ -363,9 +371,9 @@ function handleA(e){
       if(!S.form.pt.trim()||!S.form.ja.trim())return;
       if(S.view==='edit'&&S.editId){
         const c=S.cards.find(c=>c.id===S.editId);
-        if(c){c.pt=S.form.pt.trim();c.ja=S.form.ja.trim();c.note=S.form.note.trim();}
+        if(c){c.pt=S.form.pt.trim();c.ja=S.form.ja.trim();c.note=S.form.note.trim();c.ex=S.form.ex.trim();}
       }else{
-        S.cards.push({id:'fc_'+Date.now(),pt:S.form.pt.trim(),ja:S.form.ja.trim(),note:S.form.note.trim(),ef:2.5,interval:0,reps:0,nextReview:fmtD(new Date()),createdAt:Date.now()});
+        S.cards.push({id:'fc_'+Date.now(),pt:S.form.pt.trim(),ja:S.form.ja.trim(),note:S.form.note.trim(),ex:S.form.ex.trim(),ef:2.5,interval:0,reps:0,nextReview:fmtD(new Date()),createdAt:Date.now()});
       }
       save();S.view=S.editId?'list':'home';S.editId=null;toast('保存しました');
     break;
