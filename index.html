@@ -142,7 +142,7 @@ const auth=getAuth(fbApp),db=getFirestore(fbApp);
 let S={
   user:null,authOk:false,dataOk:false,
   cards:[],view:'home',flipped:false,idx:0,queue:[],search:'',
-  pop:null,editId:null,form:{pt:'',ja:'',note:'',ex:''},dirs:[],rcounts:[0,0,0,0],
+  pop:null,editId:null,form:{pt:'',ja:'',note:'',ex:''},rcounts:[0,0,0,0],
   toast:null,unsub:[]
 };
 let toastT;
@@ -173,8 +173,8 @@ function sm2(card,rating){
   return{ef:Math.round(ef*100)/100,interval:iv,reps,nextReview:fmtD(d)};
 }
 function ivLabel(days){if(days<=0)return'<1日';if(days===1)return'1日';if(days<30)return days+'日';if(days<365)return Math.round(days/30)+'ヶ月';return Math.round(days/365)+'年';}
-function preview(card,rating){return ivLabel(sm2(card,rating).interval);}
-function getDue(){const today=fmtD(new Date());return S.cards.filter(c=>!c.nextReview||c.nextReview<=today);}
+function preview(card,rev,rating){const src=rev?{ef:card.rEf||2.5,interval:card.rInterval||0,reps:card.rReps||0}:card;return ivLabel(sm2(src,rating).interval);}
+function getDue(){const today=fmtD(new Date());const due=[];S.cards.forEach(c=>{if(!c.nextReview||c.nextReview<=today)due.push({card:c,rev:false});if(c.rNextReview&&c.rNextReview<=today)due.push({card:c,rev:true});});return due;}
 function dueLabel(card){
   if(!card.nextReview)return{text:'NEW',cls:'due-new'};
   const today=fmtD(new Date());
@@ -235,9 +235,10 @@ function renderHome(){
 
 function renderReview(){
   if(S.idx>=S.queue.length)return renderDone();
-  const card=S.cards.find(c=>c.id===S.queue[S.idx]);
+  const entry=S.queue[S.idx];
+  const card=S.cards.find(c=>c.id===entry.id);
   if(!card)return renderDone();
-  const fl=S.flipped,rev=S.dirs[S.idx];
+  const fl=S.flipped,rev=entry.rev;
   const front=rev?card.ja:card.pt,back=rev?card.pt:card.ja;
   const fLang=rev?'日本語':'Português',bLang=rev?'Português':'日本語';
   return `<div class="app-inner">
@@ -251,10 +252,10 @@ function renderReview(){
       ${!fl?'<div class="rcard-tap">タップして答えを見る</div>':''}
     </div>
     ${fl?`<div class="ratings">
-      <button class="rate r0" data-a="rate" data-v="0">もう一度<span class="rate-sub">${preview(card,0)}</span></button>
-      <button class="rate r1" data-a="rate" data-v="1">難しい<span class="rate-sub">${preview(card,1)}</span></button>
-      <button class="rate r2" data-a="rate" data-v="2">良い<span class="rate-sub">${preview(card,2)}</span></button>
-      <button class="rate r3" data-a="rate" data-v="3">簡単<span class="rate-sub">${preview(card,3)}</span></button>
+      <button class="rate r0" data-a="rate" data-v="0">もう一度<span class="rate-sub">${preview(card,rev,0)}</span></button>
+      <button class="rate r1" data-a="rate" data-v="1">難しい<span class="rate-sub">${preview(card,rev,1)}</span></button>
+      <button class="rate r2" data-a="rate" data-v="2">良い<span class="rate-sub">${preview(card,rev,2)}</span></button>
+      <button class="rate r3" data-a="rate" data-v="3">簡単<span class="rate-sub">${preview(card,rev,3)}</span></button>
     </div>`:''}
     ${S.rcounts.some(v=>v>0)?`<div class="rcounts">
       <div class="rc-item"><span class="rc-dot rc-d0"></span><span class="rc-v">${S.rcounts[0]}</span></div>
@@ -346,16 +347,19 @@ function handleA(e){
     case 'home':S.view='home';S.pop=null;render();break;
     case 'start':{
       const due=getDue();
-      const reviewed=due.filter(c=>c.reps>0||c.interval>0).sort(()=>Math.random()-.5);
-      const fresh=due.filter(c=>!c.reps&&!c.interval).sort(()=>Math.random()-.5);
-      S.queue=[...reviewed,...fresh].map(c=>c.id);
-      S.dirs=S.queue.map(()=>Math.random()<0.5);
+      const reviewed=due.filter(d=>{const c=d.card;return d.rev?(c.rReps||0)>0||(c.rInterval||0)>0:c.reps>0||c.interval>0;}).sort(()=>Math.random()-.5);
+      const fresh=due.filter(d=>{const c=d.card;return d.rev?!(c.rReps||0)&&!(c.rInterval||0):!c.reps&&!c.interval;}).sort(()=>Math.random()-.5);
+      S.queue=[...reviewed,...fresh].map(d=>({id:d.card.id,rev:d.rev}));
       S.idx=0;S.flipped=false;S.view='review';render();
     }break;
     case 'flip':S.flipped=true;render();break;
     case 'rate':{
-      const card=S.cards.find(c=>c.id===S.queue[S.idx]);
-      if(card){const r=parseInt(v);S.rcounts[r]++;saveRC();const upd=sm2(card,r);Object.assign(card,upd);save();}
+      const entry=S.queue[S.idx];
+      const card=S.cards.find(c=>c.id===entry.id);
+      if(card){const r=parseInt(v);S.rcounts[r]++;saveRC();
+        if(entry.rev){const src={ef:card.rEf||2.5,interval:card.rInterval||0,reps:card.rReps||0};const upd=sm2(src,r);card.rEf=upd.ef;card.rInterval=upd.interval;card.rReps=upd.reps;card.rNextReview=upd.nextReview;}
+        else{const upd=sm2(card,r);Object.assign(card,upd);if(r>=2&&!card.rNextReview){const d=new Date();d.setDate(d.getDate()+1);card.rNextReview=fmtD(d);}}
+        save();}
       S.idx++;S.flipped=false;render();
     }break;
     case 'list':S.view='list';S.search='';S.pop=null;render();break;
@@ -373,7 +377,7 @@ function handleA(e){
         const c=S.cards.find(c=>c.id===S.editId);
         if(c){c.pt=S.form.pt.trim();c.ja=S.form.ja.trim();c.note=S.form.note.trim();c.ex=S.form.ex.trim();}
       }else{
-        S.cards.push({id:'fc_'+Date.now(),pt:S.form.pt.trim(),ja:S.form.ja.trim(),note:S.form.note.trim(),ex:S.form.ex.trim(),ef:2.5,interval:0,reps:0,nextReview:fmtD(new Date()),createdAt:Date.now()});
+        S.cards.push({id:'fc_'+Date.now(),pt:S.form.pt.trim(),ja:S.form.ja.trim(),note:S.form.note.trim(),ex:S.form.ex.trim(),ef:2.5,interval:0,reps:0,nextReview:fmtD(new Date()),rEf:2.5,rInterval:0,rReps:0,rNextReview:fmtD(new Date()),createdAt:Date.now()});
       }
       save();S.view=S.editId?'list':'home';S.editId=null;toast('保存しました');
     break;
