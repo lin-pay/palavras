@@ -202,7 +202,7 @@ function render(){
   const a=document.getElementById('app');
   if(!S.authOk){a.innerHTML='<div class="lw"><div class="sp"></div></div>';return;}
   if(!S.user){a.innerHTML=renderLogin();bind();return;}
-  if(!S.dataOk){a.innerHTML='<div class="lw"><div class="sp"></div></div>';return;}
+  if(!S.dataOk){a.innerHTML=renderHome();bind();return;}
   let html='';
   if(S.view==='review')html=renderReview();
   else if(S.view==='list')html=renderList();
