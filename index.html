@@ -220,18 +220,16 @@ function renderLogin(){
 function renderHome(){
   const due=getDue(),total=S.cards.length;
   const mastered=S.cards.filter(c=>(c.interval||0)>=30).length;
-  const MAX_NEW=20;
   const reviewedDue=due.filter(d=>{const c=d.card;return d.rev?(c.rReps||0)>0||(c.rInterval||0)>0:c.reps>0||c.interval>0;});
   const freshDue=due.filter(d=>{const c=d.card;return d.rev?!(c.rReps||0)&&!(c.rInterval||0):!c.reps&&!c.interval;});
-  const sessionCount=reviewedDue.length+Math.min(freshDue.length,MAX_NEW);
   return `<div class="app-inner">
     <div class="header"><div><div class="date-label">${dlabel()}</div><div class="greeting">Palavras</div></div><button class="hbtn" data-a="logout" title="ログアウト">↗</button></div>
     <div class="stats">
       <div class="stat"><div class="stat-v">${reviewedDue.length}</div><div class="stat-l">復習</div></div>
-      <div class="stat"><div class="stat-v">${Math.min(freshDue.length,MAX_NEW)}${freshDue.length>MAX_NEW?'<span style="font-size:10px;color:rgba(255,255,255,.35);">/'+freshDue.length+'</span>':''}</div><div class="stat-l">新規</div></div>
+      <div class="stat"><div class="stat-v">${freshDue.length}</div><div class="stat-l">新規</div></div>
       <div class="stat"><div class="stat-v">${mastered}</div><div class="stat-l">習得済み</div></div>
     </div>
-    <button class="rbtn" data-a="start" ${sessionCount?'':'disabled'}>${sessionCount?`🧠 ${sessionCount}枚を復習する`:'復習するカードはありません'}</button>
+    <button class="rbtn" data-a="start" ${due.length?'':'disabled'}>${due.length?`🧠 ${due.length}枚を復習する`:'復習するカードはありません'}</button>
     <button class="lbtn" data-a="list">📋 カード一覧（${total}枚）</button>
     ${!total?`<div class="empty"><div class="ei">🇧🇷</div><div class="et">カードを追加しましょう</div><div class="ed">＋ボタンからポルトガル語の<br>フラッシュカードを追加できます</div></div>`:''}
   </div><button class="fab" data-a="add">＋</button>`;
@@ -353,8 +351,7 @@ function handleA(e){
       const due=getDue();
       const reviewed=due.filter(d=>{const c=d.card;return d.rev?(c.rReps||0)>0||(c.rInterval||0)>0:c.reps>0||c.interval>0;}).sort(()=>Math.random()-.5);
       const fresh=due.filter(d=>{const c=d.card;return d.rev?!(c.rReps||0)&&!(c.rInterval||0):!c.reps&&!c.interval;}).sort(()=>Math.random()-.5);
-      const MAX_NEW=20;
-      S.queue=[...reviewed,...fresh.slice(0,MAX_NEW)].map(d=>({id:d.card.id,rev:d.rev}));
+      S.queue=[...reviewed,...fresh].map(d=>({id:d.card.id,rev:d.rev}));
       S.idx=0;S.flipped=false;S.view='review';render();
     }break;
     case 'flip':S.flipped=true;render();break;
